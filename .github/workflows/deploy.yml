@@ -118,31 +118,51 @@ jobs:
           set -Eeuo pipefail
           cd "$APP_PATH"
 
+          php_bin=/opt/alt/php84/usr/bin/php
+          composer_bin=composer2
+
+          if [[ ! -x "$php_bin" ]]; then
+            echo "PHP 8.4 executable not found at $php_bin." >&2
+            exit 1
+          fi
+
+          if [[ ! -f "$composer_bin" ]]; then
+            echo "Composer executable not found at $composer_bin." >&2
+            exit 1
+          fi
+
+          "$php_bin" -v
+          if ! "$php_bin" -r 'exit(version_compare(PHP_VERSION, "8.4.1", ">=") ? 0 : 1);'; then
+            echo "Deployment requires PHP 8.4.1 or newer." >&2
+            exit 1
+          fi
+          "$php_bin" "$composer_bin" --version
+
           maintenance=0
           restore_maintenance() {
             local status=$?
             trap - EXIT
             if (( maintenance )); then
-              /opt/alt/php84/usr/bin/php artisan up || status=$?
+              "$php_bin" artisan up || status=$?
             fi
             exit "$status"
           }
 
           if [[ -f artisan ]]; then
-            /opt/alt/php84/usr/bin/php artisan down --retry=60
+            "$php_bin" artisan down --retry=60
             maintenance=1
             trap restore_maintenance EXIT
           fi
 
           tar -xzf "$APP_PATH/.deployment.tar.gz" --no-same-owner -C "$APP_PATH"
           rm "$APP_PATH/.deployment.tar.gz"
-          /usr/local/bin/composer2 install --no-dev --prefer-dist --no-interaction --optimize-autoloader
-          /opt/alt/php84/usr/bin/php artisan optimize:clear
-          /opt/alt/php84/usr/bin/php artisan migrate --force
-          /opt/alt/php84/usr/bin/php artisan optimize
+          "$php_bin" "$composer_bin" install --no-dev --prefer-dist --no-interaction --optimize-autoloader
+          "$php_bin" artisan optimize:clear
+          "$php_bin" artisan migrate --force
+          "$php_bin" artisan optimize
 
           if (( maintenance )); then
-            /opt/alt/php84/usr/bin/php artisan up
+            "$php_bin" artisan up
             maintenance=0
             trap - EXIT
           fi
