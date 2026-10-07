@@ -2,7 +2,7 @@
 
 ## Extract Focused Business Operations
 
-Use a focused action class under `app/Actions` for substantive, reusable, or multi-step business operations. Keep controllers responsible for HTTP coordination, authorization, validation, and responses; avoid wrapping trivial one-step Eloquent operations in actions without a clear domain benefit. Name actions for the operation and expose a typed `handle()` method.
+Extract a discrete business operation into an action class when doing so makes the operation easier to reuse or test. An action class has no special meaning to Laravel; follow the project's naming and invocation conventions.
 
 ```php
 class CreateOrderAction

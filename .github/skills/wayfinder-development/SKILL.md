@@ -67,11 +67,6 @@ Use Wayfinder with the `<Form>` component:
 <Form {...store.form()}><input name="title" /></Form>
 ```
 
-## Wiring Backend Actions
-
-- When frontend behavior invokes a Laravel action, expose it through a controller action and route, then use the generated Wayfinder function from `@/actions/` or `@/routes/`.
-- Keep business logic in backend action classes; generated TypeScript route helpers call HTTP endpoints and must not be treated as direct imports of PHP action classes.
-
 ## Verification
 
 1. Run `vendor/bin/sail artisan wayfinder:generate` to regenerate routes if Vite plugin isn't installed
