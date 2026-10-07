@@ -60,3 +60,14 @@ jobs:
 
       - name: Run CI Checks
         run: composer ci:check
+
+      - name: Build production frontend
+        run: npm run build
+
+      - name: Upload production frontend build
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-frontend-build
+          path: public/build/
+          if-no-files-found: error
+          retention-days: 1
