@@ -59,13 +59,13 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
         return $this->hasMany(JobApplication::class);
     }
 
-    public function sendPasswordResetNotification(#[\SensitiveParameter] $token): void
-    {
-        $this->notify(new QueuedResetPassword($token));
-    }
+    // public function sendPasswordResetNotification(#[\SensitiveParameter] $token): void
+    // {
+    //     $this->notify(new QueuedResetPassword($token));
+    // }
 
-    public function sendEmailVerificationNotification()
-    {
-        $this->notify(new QueueVerifyEmail);
-    }
+    // public function sendEmailVerificationNotification()
+    // {
+    //     $this->notify(new QueueVerifyEmail);
+    // }
 }
