@@ -35,7 +35,7 @@ jobs:
         run: composer setup
 
       - name: Generate Wayfinder routes
-        run: php artisan wayfinder:generate --with-form --no-interaction
+        run: php artisan route:clear && php artisan wayfinder:generate --with-form --no-interaction
 
       - name: Run CI Checks
         run: composer ci:check
