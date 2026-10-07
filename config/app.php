@@ -13,7 +13,8 @@ return [
     |
     */
 
-    'name' => env('APP_NAME', 'Laravel'),
+    'name' => env('APP_NAME', 'JobFlow'),
+    'tagline' => env('APP_TAGLINE', 'Your Personal Job Application Tracker'),
 
     /*
     |--------------------------------------------------------------------------

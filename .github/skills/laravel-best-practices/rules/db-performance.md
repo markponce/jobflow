@@ -128,6 +128,8 @@ Schema::create('orders', function (Blueprint $table) {
 
 Confirm composite index column order and effectiveness with production-like data and the database's query-plan tools. Also check whether the database already created an index to support a foreign key before adding another one.
 
+Before implementing a feature query, map its Eloquent relationships and common filters/orderings to the schema. Scope through relationships, select only needed columns, paginate user-facing lists, and validate proposed indexes with `EXPLAIN` instead of adding indexes speculatively.
+
 ## Count Relationships Without Loading Them
 
 Use `withCount()` when only relationship counts are needed; loading and hydrating every related model wastes memory.

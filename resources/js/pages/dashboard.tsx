@@ -1,27 +1,54 @@
 import { Head } from '@inertiajs/react';
-import { PlaceholderPattern } from '@/components/ui/placeholder-pattern';
 import { dashboard } from '@/routes';
+import type { JobApplicationStatus } from '@/types/job-application';
 
-export default function Dashboard() {
+type Props = {
+    statusCounts: {
+        value: JobApplicationStatus;
+        label: string;
+        count: number;
+    }[];
+};
+
+export default function Dashboard({ statusCounts }: Props) {
     return (
         <>
             <Head title="Dashboard" />
-            <div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4">
-                <div className="grid auto-rows-min gap-4 md:grid-cols-3">
-                    <div className="relative aspect-video overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border">
-                        <PlaceholderPattern className="absolute inset-0 size-full stroke-neutral-900/20 dark:stroke-neutral-100/20" />
+            <main className="flex flex-1 flex-col gap-6 p-4 md:p-6">
+                <header className="grid gap-1">
+                    <p className="text-sm font-medium text-primary">
+                        Career workspace
+                    </p>
+                    <h1 className="text-h1">Dashboard</h1>
+                    <p className="text-sm text-muted-foreground">
+                        Your job applications grouped by status.
+                    </p>
+                </header>
+
+                <section
+                    aria-labelledby="application-status-heading"
+                    className="grid gap-4"
+                >
+                    <h2 id="application-status-heading" className="text-h2">
+                        Applications by status
+                    </h2>
+                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                        {statusCounts.map((status) => (
+                            <article
+                                key={status.value}
+                                className="grid gap-3 rounded-card border bg-card p-4 shadow-card"
+                            >
+                                <h3 className="text-body-small font-medium text-foreground-muted">
+                                    {status.label}
+                                </h3>
+                                <p className="text-3xl font-semibold tabular-nums">
+                                    {status.count}
+                                </p>
+                            </article>
+                        ))}
                     </div>
-                    <div className="relative aspect-video overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border">
-                        <PlaceholderPattern className="absolute inset-0 size-full stroke-neutral-900/20 dark:stroke-neutral-100/20" />
-                    </div>
-                    <div className="relative aspect-video overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border">
-                        <PlaceholderPattern className="absolute inset-0 size-full stroke-neutral-900/20 dark:stroke-neutral-100/20" />
-                    </div>
-                </div>
-                <div className="relative min-h-[100vh] flex-1 overflow-hidden rounded-xl border border-sidebar-border/70 md:min-h-min dark:border-sidebar-border">
-                    <PlaceholderPattern className="absolute inset-0 size-full stroke-neutral-900/20 dark:stroke-neutral-100/20" />
-                </div>
-            </div>
+                </section>
+            </main>
         </>
     );
 }

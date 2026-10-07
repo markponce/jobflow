@@ -11,6 +11,10 @@ metadata:
 This skill provides rules for designing Laravel tests. Each rule file explains what to do and why. Use `search-docs` for Laravel and Pest API syntax.
 This project uses Pest. Follow the corresponding guidance in each rule.
 
+## TDD Workflow
+
+For behavior or logic changes, write a focused test for the required outcome first and run it to confirm it fails for the expected reason. Implement the smallest change that makes it pass, rerun the focused test, then refactor while keeping it green. Include important failure paths and regression cases; do not add tests for copy-only or layout-only changes.
+
 ## Consistency First
 
 Read nearby tests before you choose syntax and organization.

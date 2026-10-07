@@ -77,7 +77,7 @@ function TwoFactorSetupStep({
                             <div className="z-10 flex h-full w-full items-center justify-center p-5">
                                 {qrCodeSvg ? (
                                     <div
-                                        className="aspect-square w-full rounded-lg bg-white p-2 [&_svg]:size-full"
+                                        className="aspect-square w-full rounded-card bg-qr-background p-2 [&_svg]:size-full"
                                         dangerouslySetInnerHTML={{
                                             __html: qrCodeSvg,
                                         }}
@@ -109,7 +109,7 @@ function TwoFactorSetupStep({
                     </div>
 
                     <div className="flex w-full space-x-2">
-                        <div className="flex w-full items-stretch overflow-hidden rounded-xl border border-border">
+                        <div className="flex w-full items-stretch overflow-hidden rounded-card border border-border">
                             {!manualSetupKey ? (
                                 <div className="flex h-full w-full items-center justify-center bg-muted p-3">
                                     <Spinner />

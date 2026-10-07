@@ -55,6 +55,10 @@
             "Composer\\Config::disableProcessTimeout",
             "@php artisan dev"
         ],
+        "dev2": [
+            "Composer\\Config::disableProcessTimeout",
+            "npx concurrently -c \"#93c5fd,#c4b5fd,#fb7185,#fdba74\" \"./vendor/bin/sail artisan queue:listen --tries=1\" \"./vendor/bin/sail artisan pail --timeout=0\" \"./vendor/bin/sail npm run dev\" --names=queue,logs,vite"
+        ],
         "lint": [
             "pint --parallel"
         ],
@@ -68,7 +72,7 @@
             "@test"
         ],
         "types:check": [
-            "phpstan analyse"
+            "phpstan analyse --memory-limit=512M"
         ],
         "test": [
             "@php artisan config:clear --ansi",
