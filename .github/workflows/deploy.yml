@@ -119,7 +119,7 @@ jobs:
           cd "$APP_PATH"
 
           php_bin=/opt/alt/php84/usr/bin/php
-          composer_bin=composer2
+          composer_bin=/usr/local/bin/composer2 
 
           if [[ ! -x "$php_bin" ]]; then
             echo "PHP 8.4 executable not found at $php_bin." >&2
