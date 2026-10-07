@@ -48,7 +48,6 @@ jobs:
           HOSTINGER_SSH_KEY: ${{ secrets.HOSTINGER_SSH_KEY }}
           HOSTINGER_KNOWN_HOSTS: ${{ secrets.HOSTINGER_KNOWN_HOSTS }}
           HOSTINGER_APP_PATH: ${{ secrets.HOSTINGER_APP_PATH }}
-          HOSTINGER_PHP_BIN: ${{ secrets.HOSTINGER_PHP_BIN || 'php' }}
         run: |
           set -euo pipefail
 
@@ -58,13 +57,6 @@ jobs:
           : "${HOSTINGER_SSH_KEY:?Set the HOSTINGER_SSH_KEY repository secret}"
           : "${HOSTINGER_KNOWN_HOSTS:?Set the HOSTINGER_KNOWN_HOSTS repository secret}"
           : "${HOSTINGER_APP_PATH:?Set the HOSTINGER_APP_PATH repository secret}"
-
-          case "$HOSTINGER_PHP_BIN" in
-            *[!A-Za-z0-9_./-]*)
-              echo "HOSTINGER_PHP_BIN must be a PHP executable name or path without spaces or shell characters." >&2
-              exit 1
-              ;;
-          esac
 
           if ! [[ "$HOSTINGER_SSH_PORT" =~ ^[0-9]+$ ]] || (( HOSTINGER_SSH_PORT < 1 || HOSTINGER_SSH_PORT > 65535 )); then
             echo "HOSTINGER_SSH_PORT must be a port number between 1 and 65535." >&2
@@ -97,7 +89,6 @@ jobs:
           )
           remote="$HOSTINGER_SSH_USER@$HOSTINGER_SSH_HOST"
           printf -v remote_app_path '%q' "$HOSTINGER_APP_PATH"
-          printf -v remote_php_bin '%q' "$HOSTINGER_PHP_BIN"
 
           archive="$RUNNER_TEMP/hostinger-deploy.tar.gz"
           tar -czf "$archive" \
@@ -123,38 +114,22 @@ jobs:
             -o "UserKnownHostsFile=$HOME/.ssh/known_hosts" \
             "$archive" "$remote:$HOSTINGER_APP_PATH/.deployment.tar.gz"
 
-          ssh "${ssh_options[@]}" "$remote" "APP_PATH=$remote_app_path PHP_BIN=$remote_php_bin bash -se" <<'REMOTE'
+          ssh "${ssh_options[@]}" "$remote" "APP_PATH=$remote_app_path bash -se" <<'REMOTE'
           set -Eeuo pipefail
           cd "$APP_PATH"
-
-          resolved_php_bin=$(command -v "$PHP_BIN" || true)
-          if [[ -z "$resolved_php_bin" || ! -x "$resolved_php_bin" ]]; then
-            echo "Configured Hostinger PHP CLI binary is not executable or not on PATH: $PHP_BIN" >&2
-            exit 1
-          fi
-          PHP_BIN=$resolved_php_bin
-
-          php_version=$("$PHP_BIN" -r 'echo PHP_VERSION;')
-          if ! "$PHP_BIN" -r 'exit(version_compare(PHP_VERSION, "8.4.1", ">=") ? 0 : 1);'; then
-            echo "Hostinger PHP CLI must be version 8.4.1 or newer; found $php_version at $PHP_BIN." >&2
-            exit 1
-          fi
-
-          php_directory=$(dirname "$(command -v "$PHP_BIN")")
-          export PATH="$php_directory:$PATH"
 
           maintenance=0
           restore_maintenance() {
             local status=$?
             trap - EXIT
             if (( maintenance )); then
-              "$PHP_BIN" artisan up || status=$?
+              php artisan up || status=$?
             fi
             exit "$status"
           }
 
           if [[ -f artisan ]]; then
-            "$PHP_BIN" artisan down --retry=60
+            php artisan down --retry=60
             maintenance=1
             trap restore_maintenance EXIT
           fi
@@ -162,12 +137,12 @@ jobs:
           tar -xzf "$APP_PATH/.deployment.tar.gz" --no-same-owner -C "$APP_PATH"
           rm "$APP_PATH/.deployment.tar.gz"
           composer install --no-dev --prefer-dist --no-interaction --optimize-autoloader
-          "$PHP_BIN" artisan optimize:clear
-          "$PHP_BIN" artisan migrate --force
-          "$PHP_BIN" artisan optimize
+          php artisan optimize:clear
+          php artisan migrate --force
+          php artisan optimize
 
           if (( maintenance )); then
-            "$PHP_BIN" artisan up
+            php artisan up
             maintenance=0
             trap - EXIT
           fi
