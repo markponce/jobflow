@@ -1,0 +1,149 @@
+name: Deploy to Hostinger
+
+on:
+  workflow_run:
+    workflows:
+      - tests
+    types:
+      - completed
+    branches:
+      - main
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: hostinger-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'main'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout tested commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          persist-credentials: false
+
+      - name: Download tested frontend build
+        uses: actions/download-artifact@v4
+        with:
+          name: production-frontend-build
+          path: public/build/
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ github.token }}
+
+      - name: Deploy to Hostinger Business Web Hosting
+        env:
+          HOSTINGER_SSH_HOST: ${{ secrets.HOSTINGER_SSH_HOST }}
+          HOSTINGER_SSH_PORT: ${{ secrets.HOSTINGER_SSH_PORT || '22' }}
+          HOSTINGER_SSH_USER: ${{ secrets.HOSTINGER_SSH_USER }}
+          HOSTINGER_SSH_KEY: ${{ secrets.HOSTINGER_SSH_KEY }}
+          HOSTINGER_KNOWN_HOSTS: ${{ secrets.HOSTINGER_KNOWN_HOSTS }}
+          HOSTINGER_APP_PATH: ${{ secrets.HOSTINGER_APP_PATH }}
+        run: |
+          set -euo pipefail
+
+          : "${HOSTINGER_SSH_HOST:?Set the HOSTINGER_SSH_HOST repository secret}"
+          : "${HOSTINGER_SSH_PORT:?Set HOSTINGER_SSH_PORT or use port 22}"
+          : "${HOSTINGER_SSH_USER:?Set the HOSTINGER_SSH_USER repository secret}"
+          : "${HOSTINGER_SSH_KEY:?Set the HOSTINGER_SSH_KEY repository secret}"
+          : "${HOSTINGER_KNOWN_HOSTS:?Set the HOSTINGER_KNOWN_HOSTS repository secret}"
+          : "${HOSTINGER_APP_PATH:?Set the HOSTINGER_APP_PATH repository secret}"
+
+          if ! [[ "$HOSTINGER_SSH_PORT" =~ ^[0-9]+$ ]] || (( HOSTINGER_SSH_PORT < 1 || HOSTINGER_SSH_PORT > 65535 )); then
+            echo "HOSTINGER_SSH_PORT must be a port number between 1 and 65535." >&2
+            exit 1
+          fi
+
+          case "$HOSTINGER_APP_PATH" in
+            /*) ;;
+            *) echo "HOSTINGER_APP_PATH must be an absolute path." >&2; exit 1 ;;
+          esac
+
+          case "$HOSTINGER_APP_PATH" in
+            /|*[!A-Za-z0-9_./-]*)
+              echo "HOSTINGER_APP_PATH must be a non-root path without spaces or shell characters." >&2
+              exit 1
+              ;;
+          esac
+
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$HOSTINGER_SSH_KEY" > "$HOME/.ssh/hostinger_deploy"
+          printf '%s\n' "$HOSTINGER_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/hostinger_deploy" "$HOME/.ssh/known_hosts"
+
+          ssh_options=(
+            -i "$HOME/.ssh/hostinger_deploy"
+            -p "$HOSTINGER_SSH_PORT"
+            -o BatchMode=yes
+            -o StrictHostKeyChecking=yes
+            -o "UserKnownHostsFile=$HOME/.ssh/known_hosts"
+          )
+          remote="$HOSTINGER_SSH_USER@$HOSTINGER_SSH_HOST"
+          printf -v remote_app_path '%q' "$HOSTINGER_APP_PATH"
+
+          archive="$RUNNER_TEMP/hostinger-deploy.tar.gz"
+          tar -czf "$archive" \
+            --exclude='./.env' \
+            --exclude='./storage' \
+            --exclude='./public/storage' \
+            --exclude='./vendor' \
+            --exclude='./node_modules' \
+            --exclude='./.git' \
+            --exclude='./.github' \
+            --exclude='./.ai' \
+            --exclude='./tests' \
+            --exclude='./test.sql' \
+            --exclude='./bootstrap/cache/*.php' \
+            -C "$GITHUB_WORKSPACE" .
+
+          ssh "${ssh_options[@]}" "$remote" "mkdir -p -- $remote_app_path"
+          scp \
+            -i "$HOME/.ssh/hostinger_deploy" \
+            -P "$HOSTINGER_SSH_PORT" \
+            -o BatchMode=yes \
+            -o StrictHostKeyChecking=yes \
+            -o "UserKnownHostsFile=$HOME/.ssh/known_hosts" \
+            "$archive" "$remote:$HOSTINGER_APP_PATH/.deployment.tar.gz"
+
+          ssh "${ssh_options[@]}" "$remote" "APP_PATH=$remote_app_path bash -se" <<'REMOTE'
+          set -Eeuo pipefail
+          cd "$APP_PATH"
+
+          maintenance=0
+          restore_maintenance() {
+            local status=$?
+            trap - EXIT
+            if (( maintenance )); then
+              php artisan up || status=$?
+            fi
+            exit "$status"
+          }
+
+          if [[ -f artisan ]]; then
+            php artisan down --retry=60
+            maintenance=1
+            trap restore_maintenance EXIT
+          fi
+
+          tar -xzf "$APP_PATH/.deployment.tar.gz" --no-same-owner -C "$APP_PATH"
+          rm "$APP_PATH/.deployment.tar.gz"
+          composer install --no-dev --prefer-dist --no-interaction --optimize-autoloader
+          php artisan optimize:clear
+          php artisan migrate --force
+          php artisan optimize
+
+          if (( maintenance )); then
+            php artisan up
+            maintenance=0
+            trap - EXIT
+          fi
+          REMOTE
