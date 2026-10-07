@@ -123,26 +123,26 @@ jobs:
             local status=$?
             trap - EXIT
             if (( maintenance )); then
-              php artisan up || status=$?
+              /opt/alt/php84/usr/bin/php artisan up || status=$?
             fi
             exit "$status"
           }
 
           if [[ -f artisan ]]; then
-            php artisan down --retry=60
+            /opt/alt/php84/usr/bin/php artisan down --retry=60
             maintenance=1
             trap restore_maintenance EXIT
           fi
 
           tar -xzf "$APP_PATH/.deployment.tar.gz" --no-same-owner -C "$APP_PATH"
           rm "$APP_PATH/.deployment.tar.gz"
-          composer install --no-dev --prefer-dist --no-interaction --optimize-autoloader
-          php artisan optimize:clear
-          php artisan migrate --force
-          php artisan optimize
+          /usr/local/bin/composer2 install --no-dev --prefer-dist --no-interaction --optimize-autoloader
+          /opt/alt/php84/usr/bin/php artisan optimize:clear
+          /opt/alt/php84/usr/bin/php artisan migrate --force
+          /opt/alt/php84/usr/bin/php artisan optimize
 
           if (( maintenance )); then
-            php artisan up
+            /opt/alt/php84/usr/bin/php artisan up
             maintenance=0
             trap - EXIT
           fi
